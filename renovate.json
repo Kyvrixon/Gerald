@@ -3,6 +3,7 @@
   "extends": ["config:recommended"],
   "packageRules": [
     {
+      "matchPackagePatterns": ["*"],
       "schedule": ["at any time"]
     }
   ]
