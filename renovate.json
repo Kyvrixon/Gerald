@@ -5,12 +5,16 @@
   ],
   "packageRules": [
     {
+      "matchPackagePatterns": [
+        "*"
+      ],
       "schedule": [
         "at any time"
-      ],
-      "matchPackageNames": [
-        "*"
       ]
     }
-  ]
+  ],
+  "dependencyDashboard": true,
+  "rangeStrategy": "bump",
+  "automerge": true,
+  "automergeType": "pr"
 }
