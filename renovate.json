@@ -1,0 +1,13 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+      "config:recommended"
+    ],
+    "updateTypes": [
+      "major",
+      "minor",
+      "patch"
+    ],
+    "prerelease": true
+  }
+  
