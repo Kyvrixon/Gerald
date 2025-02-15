@@ -129,7 +129,7 @@ export const createLeaderboard = async (
 			embeds: [await generateEmbed(currentIndex)],
 			components: [getPaginationRow(currentIndex)],
 		});
-		
+
 	} catch (e) {
 		return interaction.followUp({
 			embeds: [errEmbed("Failed to generate pagination", e, interaction, "Error")],
@@ -548,6 +548,11 @@ export const getCmdPath = (source) => {
 	}
 	return cmdValueString;
 };
+/**
+ * Generates a random hex colour code.
+ *
+ * @returns {string} A hex colour code (e.g. `#FF0000`).
+ */
 export const genColour = () => {
 	const hexChars = "0123456789ABCDEF";
 	let color = "#";
@@ -556,6 +561,28 @@ export const genColour = () => {
 	}
 	return color;
 };
+
+/**
+ * Censors a message by replacing certain words and patterns with a replacement string.
+ *
+ * @param {string} msg - The message to censor.
+ * @param {Array<string>} arr - An array of words to censor.
+ * @param {string} rep - The replacement string.
+ * @param {...RegExp} patterns - Regex patterns to censor.
+ */
+function censorText(msg, arr, rep, ...patterns) {
+	arr.forEach(word => {
+		const wordRegex = new RegExp(`\\b${word}\\b`, 'gi');
+		msg = msg.replace(wordRegex, rep);
+	});
+
+	patterns.forEach(regex => {
+		msg = msg.replace(regex, rep);
+	});
+
+	return message;
+};
+
 //===================
 export default {
 	handleCmd,
@@ -572,4 +599,6 @@ export default {
 	generateId,
 	genColour,
 	img,
+	getCmdPath,
+	censorText
 };

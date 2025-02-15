@@ -5,7 +5,8 @@
   ],
   "packageRules": [
     {
-      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"]
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
+      "prerelease": true
     }
   ]
 }
