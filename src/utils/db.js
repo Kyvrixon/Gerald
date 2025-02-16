@@ -1,172 +1,152 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { promises as fs } from "fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { setIntervalAsync } from "set-interval-async/dynamic";
 import Logger from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Database handler for managing JSON files.
- */
-class db {
-	/**
-	 * Reads the contents of a JSON file.
-	 * @param {string} filename - Path to the JSON file inside the db folder.
-	 * @returns {Promise<Object>} - The contents of the JSON file.
-	 */
-	static async read(filename) {
-		filename = filename.replace(".json", "");
-		const filePath = path.join(__dirname, "../../db", filename + ".json"); // Path to db folder at project root
+class Database {
+  constructor() {
+    this.locks = new Map();
+  }
 
-		try {
-			if (!fs.existsSync(filePath)) {
-				await fs.promises.mkdir(path.dirname(filePath), {
-					recursive: true,
-				});
-				await fs.promises.writeFile(
-					filePath,
-					JSON.stringify({}, null, 2),
-					"utf8"
-				); // this line errors
-			}
+  _getFilePath(filename) {
+    filename = filename.replace(".json", "");
+    if (filename.startsWith("<root>/")) {
+      return path.resolve(__dirname, "..", "..", filename.slice(7) + ".json");
+    } else {
+      return path.resolve(__dirname, "..", "..", "db", filename + ".json");
+    }
+  }
 
-			const data = await fs.promises.readFile(filePath, "utf8");
-			return JSON.parse(data);
-		} catch (error) {
-			Logger.error("db", `Error reading file ${filename}:`, error);
-			return {};
-		}
-	}
+  async read(filename) {
+    const filePath = this._getFilePath(filename);
 
-	/**
-	 * Writes data to a JSON file. If the file doesn't exist, it will be created. Use "../../" at the start of the file name for project root.
-	 * @param {string} filename - Path to the JSON file inside the db folder.
-	 * @param {Object} data - The data to write to the file.
-	 * @returns {Promise<boolean>} - Resolves when the file is successfully written.
-	 */
-	static async write(filename, data) {
-		await client.queue.add("db-write", async () => {
-			try {
-				filename = filename.replace(".json", "");
-				const filePath = path.join(__dirname, "../../db", filename + ".json"); // Path to db folder at project root
+    try {
+      if (!await this.#fileExists(filePath)) {
+        await this.write(filePath, {});
+        return {};
+      }
 
-				if (typeof data === "string") {
-					try {
-						data = JSON.parse(data);
-					} catch (error) {
-						console.error(
-							`Invalid JSON string for ${filename}:`,
-							error
-						);
-						return false;
-					}
-				} else if (typeof data !== "object" || data === null) {
-					console.error(
-						`Invalid data for ${filename}: must be an object or JSON string.`
-					);
-					return false;
-				}
+      const data = await fs.readFile(filePath, "utf8");
+      return JSON.parse(data);
+    } catch (error) {
+      Logger.error("db", `Error reading file ${filename}:`, error);
+      return {};
+    }
+  }
 
-				const dirPath = path.dirname(filePath);
-				if (!fs.existsSync(dirPath)) {
-					await fs.promises.mkdir(dirPath, { recursive: true });
-				}
+  async write(filename, data) {
+    const filePath = this._getFilePath(filename);
 
-				await fs.promises.writeFile(
-					filePath,
-					JSON.stringify(data, null, 2),
-					"utf8"
-				);
-				return true;
-			} catch (error) {
-				console.error(`Error writing to file ${filename}:`, error);
-				return false;
-			}
-		});
+    try {
+      await this.#_lockFile(filePath);
 
-		const result = await client.queue.getResult("db-write");
-		return result;
-	}
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch (parseError) {
+          Logger.error(`Error parsing data for ${filename}:`, parseError);
+          await this.#_unlockFile(filePath);
+          return false;
+        }
+      } else if (typeof data !== "object" || data === null || Array.isArray(data)) {
+        Logger.error(`Invalid data for ${filename}: must be an object.`);
+        await this.#_unlockFile(filePath);
+        return false;
+      }
 
-	/**
-	 * Deletes a key from a JSON file (can be a nested key).
-	 * @param {string} filename - Path to the JSON file inside the db folder.
-	 * @param {string} key - The key to delete (can use dot notation for nested keys).
-	 * @returns {Promise<Object>} - Resolves when the key is deleted.
-	 */
-	static async delete(filename, key) {
-		try {
-			filename = filename.replace(".json", "");
-			const data = await db.read(filename + ".json");
-			const keys = key.split(".");
-			let current = data;
+      if (!(await this.#fileExists(filePath))) {
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+      }
 
-			for (let i = 0; i < keys.length - 1; i++) {
-				if (current[keys[i]] === undefined) {
-					console.error(`Key ${key} not found in file ${filename}.`);
-					return {};
-				}
-				current = current[keys[i]];
-			}
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+      await this.#_unlockFile(filePath);
+      return true;
+    } catch (error) {
+      Logger.error(`Error writing to file ${filename}:`, error);
+      await this.#_unlockFile(filePath);
+      return false;
+    }
+  }
 
-			const finalKey = keys[keys.length - 1];
-			if (current[finalKey] !== undefined) {
-				const value = current[finalKey];
+  async delete(filename, key) {
+    const filePath = this._getFilePath(filename);
 
-				if (Array.isArray(value)) {
-					current[finalKey] = [];
-				} else if (typeof value === "object" && value !== null) {
-					current[finalKey] = {};
-				} else if (typeof value === "string") {
-					current[finalKey] = "";
-				} else if (typeof value === "number") {
-					current[finalKey] = 0;
-				} else if (typeof value === "boolean") {
-					current[finalKey] = false;
-				} else if (value === null) {
-					current[finalKey] = null;
-				} else {
-					current[finalKey] = "";
-				}
+    try {
+      await this.#_lockFile(filePath);
 
-				await db.write(filename, data);
-				return {};
-			} else {
-				console.error(`Key ${key} not found in file ${filename}.`);
-				return {};
-			}
-		} catch (error) {
-			console.error(
-				`Error deleting key ${key} from file ${filename}:`,
-				error
-			);
-			return {};
-		}
-	}
+      let existingData = {};
+      if (await this.#fileExists(filePath)) {
+        const rawData = await fs.readFile(filePath, "utf8");
+        existingData = JSON.parse(rawData);
+      }
 
-	static async readAll(folderPath) {
-		const dirPath = path.join(__dirname, "../../db", folderPath);
-		const result = {};
+      const keys = key.split(".");
+      let current = existingData;
 
-		try {
-			const files = await fs.promises.readdir(dirPath);
-			const jsonFiles = files.filter((file) => file.endsWith(".json"));
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (current[keys[i]] === undefined) {
+          Logger.error(`Key ${key} not found in file ${filename}.`);
+          await this.#_unlockFile(filePath);
+          return false;
+        }
+        current = current[keys[i]];
+      }
 
-			for (const file of jsonFiles) {
-				const filePath = path.join(dirPath, file);
-				const data = await fs.promises.readFile(filePath, "utf8");
-				result[path.basename(file, ".json")] = JSON.parse(data);
-			}
-		} catch (error) {
-			console.error(
-				`Error reading all JSON files from ${folderPath}:`,
-				error
-			);
-		}
+      const finalKey = keys[keys.length - 1];
+      if (current[finalKey] !== undefined) {
+        delete current[finalKey];
+      } else {
+        Logger.error(`Key ${key} not found in file ${filename}.`);
+        await this.#_unlockFile(filePath);
+        return false;
+      }
 
-		return result;
-	}
+      await fs.writeFile(filePath, JSON.stringify(existingData, null, 2), "utf8");
+      await this.#_unlockFile(filePath);
+      return true;
+    } catch (error) {
+      Logger.error(`Error deleting key ${key} from file ${filename}:`, error);
+      await this.#_unlockFile(filePath);
+      return false;
+    }
+  }
+
+  async #_lockFile(filePath) {
+    if (this.locks.get(filePath)) {
+      await this.#_waitForFile(filePath);
+    }
+    this.locks.set(filePath, true);
+  }
+
+  async #_unlockFile(filePath) {
+    this.locks.set(filePath, false);
+  }
+
+  async #_waitForFile(filePath) {
+    return new Promise((resolve) => {
+      const interval = setIntervalAsync(async () => {
+        if (!this.locks.get(filePath)) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 10);
+    });
+  }
+
+  // Helper method to check if a file exists
+  async #fileExists(filePath) {
+    try {
+      await fs.stat(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
+const db = new Database();
 export default db;

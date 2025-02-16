@@ -1,4 +1,5 @@
 import db from "../db.js";
+import q from "../../utils/queue.js";
 
 let messageCounter = 0; // Global counter
 const MSG_CAP = 20;
@@ -31,14 +32,13 @@ export const randomMsg = async (client, message, mentioned) => {
  * @param {boolean} mentioned - Whether the message was a mention.
  * @returns {Promise<void>}
  */
-const sendMessage = async (client, message, mentioned) => {
-    await client.queue.add("random-msg-update", async () => {
+const sendMessage = async (message, mentioned) => {
+    await q.add("random-msg-update", async () => {
         const x = await db.read("cache/messages");
         return x;
     });
-
-    await client.queue.start();
-    const data = await client.queue.getResult("random-msg-update");
+    
+    const data = await q.getResult("random-msg-update");
 
     const channelMessages = data.msgs?.["1295176139639230496"] || [];
     if (channelMessages.length < 50 && !mentioned) return;

@@ -9,6 +9,7 @@ const event = {
 	enabled: true,
 	name: "messageCreate",
 	once: false,
+
 	async init(client, message) {
 
 		let botMentioned = false;
@@ -36,7 +37,7 @@ const event = {
 
 export default event;
 
-async function cacheMessage(client, message) {
+async function cacheMessage(message) {
 	if (!message || message.author.bot || !message.content) {
 		return;
 	}
@@ -49,13 +50,7 @@ async function cacheMessage(client, message) {
 			cached_at: Date.now(),
 		};
 
-		await client.queue.add(async () => {
-			return await db.read("cache/messages");
-		}, "cache-db-read", "Reading cached messages");
-
-		await client.queue.start();
-
-		const data = await client.queue.getResult("cache-db-read");
+		const data = await db.read("cache/messages");
 
 		if (!data.msgs) {
 			data.msgs = {};
@@ -71,7 +66,7 @@ async function cacheMessage(client, message) {
 		}
 
 
-		return await db.write("cache/messages", data);
+		await db.write("cache/messages", data);
 
 	} catch (err) {
 		Logger.error("cacheMessage", "Error caching message", err);

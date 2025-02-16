@@ -1,0 +1,9 @@
+{
+    "filepaths": [
+        "cache/messages",
+        "cache/users"
+    ],
+    "AI": {
+        "blockedContent": []
+    }
+}

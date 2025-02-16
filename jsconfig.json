@@ -1,12 +1,12 @@
 {
     "compilerOptions": {
       "allowJs": true, 
-      "strict": true, 
+      "strict": false, 
       "noEmit": true    
     },
     "include": [
       "**/*.js",  
-      "types/**/*.d.ts"  
+      "types/*.d.ts"  
     ]
   }
   
