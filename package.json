@@ -6,7 +6,7 @@
   "type": "module",
   "dependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "@kyvrixon/async-queue": "^1.0.2",
+    "@kyvrixon/async-queue": "^1.1.4",
     "chalk": "^5.4.1",
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
