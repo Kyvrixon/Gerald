@@ -115,6 +115,12 @@ class Database {
     }
   }
 
+  async #readAll(filename) {
+    const filePath = this._getFilePath(filename);
+
+    //const 
+  }
+
   async #_lockFile(filePath) {
     if (this.locks.get(filePath)) {
       await this.#_waitForFile(filePath);

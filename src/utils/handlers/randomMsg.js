@@ -1,7 +1,7 @@
 import db from "../db.js";
 
 let messageCounter = 0; // Global counter
-const MSG_CAP = 20;
+const MSG_CAP = 20; // or read from db config
 
 /**
  * Sends a random message.
@@ -16,9 +16,7 @@ export const randomMsg = async (message, mentioned) => {
     messageCounter++;
 
     if (mentioned || messageCounter >= MSG_CAP) {
-        if (!mentioned) {
-            messageCounter = 0;
-        }
+        messageCounter = 0;
         await sendMessage(message, mentioned);
     }
 };

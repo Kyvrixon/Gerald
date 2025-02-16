@@ -64,7 +64,7 @@ export const afkHandler = async (message) => {
 					embeds: [
 						basicEmbed(
 							null,
-							`**Reason:** ${isAFK.message}\n**Since:** <t:${Math.floor(parseInt(isAFK.time) / 1000)}:R>`,
+							`**Reason:** ${isAFK.message}\n**Since:** <t:${isAFK.time}:R>`,
 							[],
 							"DarkButNotBlack",
 							{
