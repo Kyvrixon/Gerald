@@ -1,17 +1,15 @@
 import db from "../db.js";
-import q from "../../utils/queue.js";
 
 let messageCounter = 0; // Global counter
 const MSG_CAP = 20;
 
 /**
  * Sends a random message.
- * @param {import('discord.js').Client} client - The Discord client instance.
  * @param {import('discord.js').Message} message - The message object.
  * @param {boolean} mentioned - Whether the message was a mention.
  * @returns {Promise<void>}
  */
-export const randomMsg = async (client, message, mentioned) => {
+export const randomMsg = async (message, mentioned) => {
     if (message.channel.id !== "1295176139639230496") return;
     if (message.author.bot) return;
 
@@ -21,7 +19,7 @@ export const randomMsg = async (client, message, mentioned) => {
         if (!mentioned) {
             messageCounter = 0;
         }
-        await sendMessage(client, message, mentioned);
+        await sendMessage(message, mentioned);
     }
 };
 
@@ -33,12 +31,7 @@ export const randomMsg = async (client, message, mentioned) => {
  * @returns {Promise<void>}
  */
 const sendMessage = async (message, mentioned) => {
-    await q.add("random-msg-update", async () => {
-        const x = await db.read("cache/messages");
-        return x;
-    });
-    
-    const data = await q.getResult("random-msg-update");
+    const data = await db.read("cache/messages");
 
     const channelMessages = data.msgs?.["1295176139639230496"] || [];
     if (channelMessages.length < 50 && !mentioned) return;

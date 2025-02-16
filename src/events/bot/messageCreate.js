@@ -27,8 +27,8 @@ const event = {
 
 		try {
 			afkHandler(message);
-			cacheMessage(client, message);
-			randomMsg(client, message, botMentioned);
+			cacheMessage(message);
+			randomMsg(message, botMentioned);
 		} catch (err) {
 			Logger.error("msgCreate", "sum broke :(", err);
 		}
